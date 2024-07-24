@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 contract CandleAuction {
+	address public owner;
 	address public highestBidder;
 	uint public highestBid;
 	uint public endTime;
@@ -11,6 +12,7 @@ contract CandleAuction {
 	event AuctionEnded(address winner, uint amount);
 
 	constructor(uint _biddingTime) {
+		owner = msg.sender;
 		endTime = block.timestamp + _biddingTime;
 	}
 
