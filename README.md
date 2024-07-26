@@ -35,4 +35,5 @@ You should now have the Hardhat node running and the frontend development server
 
 ## Demo Video
 
-<iframe width="600" height="400" src="https://www.youtube.com/embed/6uIauHBI2WQ" frameborder="0" allowfullscreen></iframe>
+[Click here to watch the demo video](https://www.youtube.com/watch?v=6uIauHBI2WQ)
+
