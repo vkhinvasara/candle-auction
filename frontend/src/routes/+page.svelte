@@ -1,80 +1,94 @@
-<script>
-	// @ts-nocheck
-
+<script lang="ts">
 	import { onMount } from "svelte";
-	import { contract, getAuction } from "$lib/ethereum";
+	import { ethers } from "ethers";
+	import { CandleAuctionContract } from "$lib/ethereum";
 
-	let auctions = [];
+	let auctions: {
+		id: number;
+		highestBidder: string;
+		highestBid: string;
+		auctionEndTime: number;
+		randomEndTime: number;
+		ended: boolean;
+	}[] = [];
+	let error = "";
 
 	onMount(async () => {
-		if ($contract) {
-			const auctionCount = await $contract.auctionCount();
-			auctions = await Promise.all(
-				Array.from({ length: auctionCount }, (_, i) => getAuction(i))
-			);
+		try {
+			if (typeof (window as any).ethereum !== "undefined") {
+				const provider = new ethers.providers.Web3Provider((window as any).ethereum);
+				const signer = provider.getSigner();
+				const contract = new CandleAuctionContract(provider, signer);
+				const auctionCount = await contract.getAuctionCount();
+				console.log(auctionCount);
+				for (let i = 0; i < auctionCount; i++) {
+					const auctionDetails: {
+						highestBidder: string;
+						highestBid: string;
+						auctionEndTime: number;
+						randomEndTime: number;
+						ended: boolean;
+					} = await contract.getAuctionDetails(i);
+					console.log(auctionDetails);
+					if (!auctionDetails.ended) {
+						const updatedAuctions = [...auctions, { id: i, ...auctionDetails }];
+						auctions = updatedAuctions;
+					}
+				}
+			} else {
+				error =
+					"MetaMask is not installed. Please install MetaMask and try again.";
+			}
+		} catch (err) {
+			error = `Error fetching auctions: ${(err as Error).message}`;
 		}
 	});
 </script>
 
-<h1>Active Auctions</h1>
-<div class="auction-list">
-{#each auctions as auction}
-	<div class = "auction-card">
-		<h2>{auction.itemName}</h2>
-		<p>Highest Bid: {auction.highestBid} ETH</p>
-		<p>Ends at: {auction.endTime.toLocaleString()}</p>
-		<a href="/auction/{auction.id}">View Auction</a>
-	</div>
-{/each}
-</div>
+<main>
+	<h1>Ongoing Auctions</h1>
+	{#if error}
+		<p class="error">{error}</p>
+	{/if}
+	{#if auctions.length > 0}
+		<ul>
+			{#each auctions as auction}
+				<li>
+					<h2>Auction {auction.id}</h2>
+					<p>Highest Bidder: {auction.highestBidder}</p>
+					<p>Highest Bid: {auction.highestBid} ETH</p>
+					<p>
+						Auction End Time: {new Date(
+							auction.auctionEndTime * 1000
+						).toLocaleString()}
+					</p>
+					<p>
+						Random End Time: {new Date(
+							auction.randomEndTime * 1000
+						).toLocaleString()}
+					</p>
+				</li>
+			{/each}
+		</ul>
+	{:else}
+		<p>No ongoing auctions at the moment.</p>
+	{/if}
+</main>
+
 <style>
-	h1 {
-		text-align: center;
-		margin-top: 20px;
-		color: #333;
+	main {
+		padding: 1rem;
 	}
-
-	.auction-list {
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: center;
-		gap: 20px;
-		padding: 20px;
+	.error {
+		color: red;
 	}
-
-	.auction-card {
-		background: #fff;
-		border: 1px solid #ddd;
-		border-radius: 8px;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-		padding: 20px;
-		width: 300px;
-		text-align: center;
+	ul {
+		list-style-type: none;
+		padding: 0;
 	}
-
-	.auction-card h2 {
-		font-size: 1.5em;
-		margin-bottom: 10px;
-		color: #0070f3;
-	}
-
-	.auction-card p {
-		margin: 5px 0;
-		color: #555;
-	}
-
-	.auction-card a {
-		display: inline-block;
-		margin-top: 10px;
-		padding: 10px 20px;
-		background: #0070f3;
-		color: #fff;
-		text-decoration: none;
-		border-radius: 4px;
-		transition: background 0.3s;
-	}
-
-	.auction-card a:hover {
-		background: #005bb5;
+	li {
+		border: 1px solid #ccc;
+		padding: 1rem;
+		margin: 1rem 0;
 	}
 </style>

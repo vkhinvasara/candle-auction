@@ -1,33 +1,42 @@
-<script>
-// @ts-nocheck
-
-	import { createAuction } from '$lib/ethereum';
+<script lang="ts">
+	import { onMount } from 'svelte';
+	import { ethers } from 'ethers';
+	import { CandleAuctionContract } from '$lib/ethereum';
   
-	let itemName = '';
-	let duration = 3600; // Default to 1 hour
+	let provider: ethers.providers.Web3Provider;
+	let signer: ethers.Signer;
+	let auctionContract: CandleAuctionContract;
+	let randomEndTime: number = 3600; 
+	let message: string = '';
   
-	async function handleSubmit() {
+	onMount(async () => {
+	  provider = new ethers.providers.Web3Provider(window.ethereum);
+	  await provider.send("eth_requestAccounts", []);
+	  signer = provider.getSigner();
+  
+	  auctionContract = new CandleAuctionContract(provider, signer);
+	});
+  
+	async function createAuction() {
 	  try {
-		const auctionId = await createAuction(itemName, duration);
-		alert(`Auction created with ID: ${auctionId}`);
-		itemName = '';
-		duration = 3600;
+		const tx = await auctionContract.createAuction(randomEndTime);
+		message = 'Auction created successfully!';
+		console.log('Auction created successfully:', tx);
 	  } catch (error) {
-		alert(`Error creating auction: ${error.message}`);
+		message = 'Error creating auction.';
+		console.error('Error creating auction:', error);
 	  }
 	}
   </script>
   
-  <h1>Create New Auction</h1>
-  
-  <form on:submit|preventDefault={handleSubmit}>
-	<div>
-	  <label for="itemName">Item Name:</label>
-	  <input id="itemName" bind:value={itemName} required>
-	</div>
-	<div>
-	  <label for="duration">Duration (in seconds):</label>
-	  <input id="duration" type="number" bind:value={duration} min="60" required>
-	</div>
-	<button type="submit">Create Auction</button>
-  </form>
+  <main>
+	<h1>Create Auction</h1>
+	<form on:submit|preventDefault={createAuction}>
+	  <label for="randomEndTime">Random End Time (seconds):</label>
+	  <input type="number" id="randomEndTime" bind:value={randomEndTime} min="1" required />
+	  <button type="submit">Create Auction</button>
+	</form>
+	{#if message}
+	  <p>{message}</p>
+	{/if}
+  </main>

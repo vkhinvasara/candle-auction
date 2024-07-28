@@ -2,40 +2,51 @@
 pragma solidity ^0.8.24;
 
 contract CandleAuction {
-    address public highestBidder;
-    uint public highestBid;
-    uint public auctionEndTime;
-    uint public randomEndTime;
-    bool public ended;
-    address public owner;
-
-    mapping(address => uint) public pendingReturns;
-
-    event HighestBidIncreased(address bidder, uint amount);
-    event AuctionEnded(address winner, uint amount);
-
-    constructor(uint _biddingTime) {
-        owner = msg.sender;
-        auctionEndTime = block.timestamp + _biddingTime;
-        randomEndTime =
-            auctionEndTime -
-            (uint(
-                keccak256(abi.encodePacked(block.timestamp, block.difficulty))
-            ) % _biddingTime);
+    struct Auction {
+        address highestBidder;
+        uint highestBid;
+        uint auctionEndTime;
+        uint randomEndTime;
+        bool ended;
     }
 
-    function placeBid() public payable {
-        require(block.timestamp <= auctionEndTime, "Auction already ended.");
-        require(block.timestamp <= randomEndTime, "Auction ended randomly.");
-        require(msg.value > highestBid, "There already is a higher bid.");
+    address public owner;
+    Auction[] public auctions;
+    mapping(address => uint) public pendingReturns;
 
-        if (highestBid != 0) {
-            pendingReturns[highestBidder] += highestBid;
+    event HighestBidIncreased(uint auctionId, address bidder, uint amount);
+    event AuctionEnded(uint auctionId, address winner, uint amount);
+
+    constructor() {
+        owner = msg.sender;
+    }
+
+    function createAuction(uint _biddingTime) public {
+        require(msg.sender == owner, "Only the owner can create auctions.");
+        uint auctionEndTime = block.timestamp + _biddingTime;
+        uint randomEndTime = auctionEndTime - (uint(keccak256(abi.encodePacked(block.timestamp, block.difficulty))) % _biddingTime);
+        auctions.push(Auction({
+            highestBidder: address(0),
+            highestBid: 0,
+            auctionEndTime: auctionEndTime,
+            randomEndTime: randomEndTime,
+            ended: false
+        }));
+    }
+
+    function placeBid(uint auctionId) public payable {
+        Auction storage auction = auctions[auctionId];
+        require(block.timestamp <= auction.auctionEndTime, "Auction already ended.");
+        require(block.timestamp <= auction.randomEndTime, "Auction ended randomly.");
+        require(msg.value > auction.highestBid, "There already is a higher bid.");
+
+        if (auction.highestBid != 0) {
+            pendingReturns[auction.highestBidder] += auction.highestBid;
         }
 
-        highestBidder = msg.sender;
-        highestBid = msg.value;
-        emit HighestBidIncreased(msg.sender, msg.value);
+        auction.highestBidder = msg.sender;
+        auction.highestBid = msg.value;
+        emit HighestBidIncreased(auctionId, msg.sender, msg.value);
     }
 
     function withdraw() public returns (bool) {
@@ -51,17 +62,35 @@ contract CandleAuction {
         return true;
     }
 
-    function endAuction() public {
-        require(
-            block.timestamp >= auctionEndTime ||
-                block.timestamp >= randomEndTime,
-            "Auction not yet ended."
+    function endAuction(uint auctionId) public {
+        Auction storage auction = auctions[auctionId];
+        require(block.timestamp >= auction.auctionEndTime || block.timestamp >= auction.randomEndTime, "Auction not yet ended.");
+        require(!auction.ended, "endAuction has already been called.");
+
+        auction.ended = true;
+        emit AuctionEnded(auctionId, auction.highestBidder, auction.highestBid);
+
+        payable(owner).transfer(auction.highestBid);
+    }
+
+    function getAuctionDetails(uint auctionId) public view returns (
+        address _highestBidder,
+        uint _highestBid,
+        uint _auctionEndTime,
+        uint _randomEndTime,
+        bool _ended
+    ) {
+        Auction storage auction = auctions[auctionId];
+        return (
+            auction.highestBidder,
+            auction.highestBid,
+            auction.auctionEndTime,
+            auction.randomEndTime,
+            auction.ended
         );
-        require(!ended, "endAuction has already been called.");
+    }
 
-        ended = true;
-        emit AuctionEnded(highestBidder, highestBid);
-
-        payable(owner).transfer(highestBid);
+    function getAuctionCount() public view returns (uint) {
+        return auctions.length;
     }
 }
