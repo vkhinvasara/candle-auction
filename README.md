@@ -33,7 +33,4 @@ Follow these steps to set up and run the project:
 
 You should now have the Hardhat node running and the frontend development server up and running.
 
-## Demo Video
-
-[Click here to watch the demo video](https://www.youtube.com/watch?v=6uIauHBI2WQ)
 
