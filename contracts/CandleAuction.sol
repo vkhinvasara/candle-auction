@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 contract CandleAuction {
     struct Auction {
+        string auctionItem;
         address highestBidder;
         uint highestBid;
         uint auctionEndTime;
@@ -21,11 +22,12 @@ contract CandleAuction {
         owner = msg.sender;
     }
 
-    function createAuction(uint _biddingTime) public {
+    function createAuction(uint _biddingTime, string memory _auctionItem) public {
         require(msg.sender == owner, "Only the owner can create auctions.");
         uint auctionEndTime = block.timestamp + _biddingTime;
         uint randomEndTime = auctionEndTime - (uint(keccak256(abi.encodePacked(block.timestamp, block.difficulty))) % _biddingTime);
         auctions.push(Auction({
+            auctionItem: _auctionItem,
             highestBidder: address(0),
             highestBid: 0,
             auctionEndTime: auctionEndTime,
@@ -74,6 +76,7 @@ contract CandleAuction {
     }
 
     function getAuctionDetails(uint auctionId) public view returns (
+        string memory _auctionItem,
         address _highestBidder,
         uint _highestBid,
         uint _auctionEndTime,
@@ -82,6 +85,7 @@ contract CandleAuction {
     ) {
         Auction storage auction = auctions[auctionId];
         return (
+            auction.auctionItem,
             auction.highestBidder,
             auction.highestBid,
             auction.auctionEndTime,
