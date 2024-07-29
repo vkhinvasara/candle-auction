@@ -1,5 +1,5 @@
 # Demo video 
-[![Demo Video](https://img.youtube.com/vi/YOUR_VIDEO_ID/0.jpg)](https://www.youtube.com/watch?v=nva7GcwhDhY)
+[![Demo video on YouTube](https://img.youtube.com/vi/YOUR_VIDEO_ID/0.jpg)](https://www.youtube.com/watch?v=nva7GcwhDhY)
 
 
 ## Running the Project
